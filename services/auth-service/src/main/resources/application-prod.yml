@@ -1,0 +1,37 @@
+# ── Auth Service – Production Profile ────────────────────────────────────
+
+spring:
+    datasource:
+        hikari:
+            maximum-pool-size: 20
+            minimum-idle: 5
+            idle-timeout: 300000
+            max-lifetime: 1800000
+            connection-timeout: 20000
+
+    jpa:
+        show-sql: false
+        properties:
+            hibernate:
+                format_sql: false
+
+app:
+    jwt:
+        secret: ${JWT_SECRET}
+        access-token-expiry-ms: 900000          # 15 minutes
+        refresh-token-expiry-days: 7
+
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,metrics
+    endpoint:
+        health:
+            show-details: never
+
+logging:
+    level:
+        root: WARN
+        com.medtrust.auth: INFO
+        org.hibernate.SQL: ERROR

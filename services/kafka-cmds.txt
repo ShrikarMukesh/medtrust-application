@@ -1,0 +1,3 @@
+docker exec kafka kafka-topics --bootstrap-server kafka:9093 --list
+
+docker exec kafka kafka-consumer-groups --bootstrap-server kafka:9093 --list

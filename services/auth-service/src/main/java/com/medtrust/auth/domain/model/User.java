@@ -99,6 +99,12 @@ public class User {
 
     // ── Domain events ──
 
+    public void addDomainEvents(List<DomainEvent> events) {
+        if (events != null) {
+            this.domainEvents.addAll(events);
+        }
+    }
+
     private void addDomainEvent(DomainEvent event) {
         this.domainEvents.add(event);
     }

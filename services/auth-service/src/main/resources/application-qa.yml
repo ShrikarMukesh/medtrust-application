@@ -1,0 +1,29 @@
+# ── Auth Service – QA Profile ───────────────────────────────────────────
+
+spring:
+    jpa:
+        show-sql: false
+        properties:
+            hibernate:
+                format_sql: false
+
+app:
+    jwt:
+        secret: ${JWT_SECRET:qa-s3cur3-jwt-key-medtrust-platform-must-be-256-bits-long-hs256}
+        access-token-expiry-ms: 900000          # 15 minutes
+        refresh-token-expiry-days: 7
+
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,metrics,circuitbreakers,retries,bulkheads
+    endpoint:
+        health:
+            show-details: always
+
+logging:
+    level:
+        root: INFO
+        com.medtrust.auth: INFO
+        org.hibernate.SQL: WARN

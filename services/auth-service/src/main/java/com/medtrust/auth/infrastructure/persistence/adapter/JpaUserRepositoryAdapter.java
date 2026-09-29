@@ -24,7 +24,9 @@ public class JpaUserRepositoryAdapter implements UserRepository {
     public User save(User user) {
         UserJpaEntity entity = toEntity(user);
         UserJpaEntity saved = jpaRepository.save(entity);
-        return toDomain(saved);
+        User result = toDomain(saved);
+        result.addDomainEvents(user.pullDomainEvents());
+        return result;
     }
 
     @Override

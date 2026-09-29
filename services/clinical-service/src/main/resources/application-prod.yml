@@ -1,0 +1,31 @@
+# ── Clinical Service – Production Profile ───────────────────────────────
+
+spring:
+    datasource:
+        hikari:
+            maximum-pool-size: 20
+            minimum-idle: 5
+            idle-timeout: 300000
+            max-lifetime: 1800000
+            connection-timeout: 20000
+
+    jpa:
+        show-sql: false
+        properties:
+            hibernate:
+                format_sql: false
+
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,metrics
+    endpoint:
+        health:
+            show-details: never
+
+logging:
+    level:
+        root: WARN
+        com.medtrust.clinical: INFO
+        org.hibernate.SQL: ERROR
