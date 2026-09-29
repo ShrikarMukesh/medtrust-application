@@ -83,9 +83,19 @@ public class NotificationService {
             return;
         }
 
-        // Determine channel from contact format
-        NotificationChannel channel = recipientContact.contains("@")
-                ? NotificationChannel.EMAIL : NotificationChannel.WHATSAPP;
+        // Determine channel from payload or contact format
+        String requestedChannel = extractString(payload, "channel", null);
+        NotificationChannel channel;
+        if (requestedChannel != null) {
+            try {
+                channel = NotificationChannel.valueOf(requestedChannel.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                channel = recipientContact.contains("@") ? NotificationChannel.EMAIL : NotificationChannel.SMS;
+            }
+        } else {
+            channel = recipientContact.contains("@")
+                    ? NotificationChannel.EMAIL : NotificationChannel.SMS;
+        }
 
         String subject = "MedTrust — " + humanize(eventType);
         String body = buildMessageBody(eventType, payload);

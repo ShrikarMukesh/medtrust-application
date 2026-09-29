@@ -2,6 +2,8 @@ server:
     port: 8086
 
 spring:
+    profiles:
+        active: ${SPRING_PROFILES_ACTIVE:dev}
     application:
         name: notification-service
 
@@ -66,9 +68,9 @@ app:
     sms:
         enabled: ${SMS_ENABLED:false}
         twilio:
-            account-sid: ${TWILIO_ACCOUNT_SID:}
-            auth-token: ${TWILIO_AUTH_TOKEN:}
-            from-number: ${TWILIO_FROM_NUMBER:}
+            account-sid: ${TWILIO_ACCOUNT_SID:${twilio.account.sid:}}
+            auth-token: ${TWILIO_AUTH_TOKEN:${twilio.auth.token:}}
+            from-number: ${TWILIO_FROM_NUMBER:${twilio.from.number:}}
 
     email:
         enabled: ${EMAIL_ENABLED:false}
@@ -88,6 +90,8 @@ resilience4j:
                 waitDurationInOpenState: 30s
                 permittedNumberOfCallsInHalfOpenState: 3
                 automaticTransitionFromOpenToHalfOpenEnabled: true
+                ignoreExceptions:
+                    - com.medtrust.notification.infrastructure.channel.TwilioClientException
         instances:
             whatsappSender:
                 baseConfig: default
@@ -103,6 +107,8 @@ resilience4j:
                 waitDuration: 1s
                 enableExponentialBackoff: true
                 exponentialBackoffMultiplier: 2
+                ignoreExceptions:
+                    - com.medtrust.notification.infrastructure.channel.TwilioClientException
         instances:
             whatsappSender:
                 baseConfig: default
