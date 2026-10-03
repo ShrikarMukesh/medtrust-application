@@ -18,6 +18,15 @@ export interface ConsentResponse {
   updatedAt?: string;
 }
 
+export const CONSENT_SCOPES = [
+  'VIEW_DEMOGRAPHICS',
+  'VIEW_CLINICAL_RECORDS',
+  'VIEW_APPOINTMENTS',
+  'VIEW_PRESCRIPTIONS',
+  'VIEW_LAB_RESULTS',
+  'FULL_ACCESS',
+] as const;
+
 const BASE = SERVICE_URLS.consent;
 
 function normalizeConsent(c: any): ConsentResponse {

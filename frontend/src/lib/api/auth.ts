@@ -64,6 +64,16 @@ export async function getUsers(): Promise<UserResponse[]> {
   return apiFetch<UserResponse[]>(BASE, '/api/users');
 }
 
+/** Staff picker for appointments/consents — available to any authenticated user. */
+export async function getStaffDirectory(): Promise<UserResponse[]> {
+  if (isMockMode()) return mockUsers;
+  try {
+    return await apiFetch<UserResponse[]>(BASE, '/api/users/directory');
+  } catch {
+    return getUsers();
+  }
+}
+
 export async function getCurrentUser(): Promise<UserResponse> {
   if (isMockMode()) return mockUsers[3]; // admin
   return apiFetch<UserResponse>(BASE, '/api/users/me');

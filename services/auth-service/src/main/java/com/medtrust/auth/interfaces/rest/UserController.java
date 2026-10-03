@@ -28,6 +28,13 @@ public class UserController {
         return ResponseEntity.ok(Map.of("success", true, "data", response));
     }
 
+    /** Authenticated staff/patient UI: list users for provider and consent pickers. */
+    @GetMapping("/directory")
+    public ResponseEntity<Map<String, Object>> directory() {
+        List<UserResponse> users = userManagementService.findAll();
+        return ResponseEntity.ok(Map.of("success", true, "data", users));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getUserById(@PathVariable String id) {
         UserResponse response = userManagementService.findById(id);

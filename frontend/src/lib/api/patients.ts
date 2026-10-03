@@ -30,8 +30,59 @@ export async function getPatient(id: string): Promise<PatientResponse> {
   return apiFetch<PatientResponse>(BASE, `/api/patients/${id}`);
 }
 
-export async function registerPatient(data: Record<string, unknown>): Promise<PatientResponse> {
-  if (isMockMode()) return mockPatients[0];
+export interface RegisterPatientData {
+  mrn: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: string;
+  bloodType?: string;
+  contactInfo: {
+    phone: string;
+    email: string;
+    address: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+  };
+  emergencyContact?: { name: string; relationship: string; phone: string };
+  insuranceInfo?: { provider: string; policyNumber: string; groupNumber?: string; expirationDate?: string };
+  allergies?: string[];
+}
+
+export async function registerPatient(data: RegisterPatientData): Promise<PatientResponse> {
+  if (isMockMode()) {
+    return {
+      ...mockPatients[0],
+      ...data,
+      id: `p-${Date.now()}`,
+      fullName: [data.firstName, data.middleName, data.lastName].filter(Boolean).join(' '),
+      middleName: data.middleName ?? null,
+      bloodType: data.bloodType || 'UNKNOWN',
+      contactInfo: {
+        phone: data.contactInfo.phone,
+        email: data.contactInfo.email,
+        address: data.contactInfo.address,
+        city: data.contactInfo.city || '',
+        state: data.contactInfo.state || '',
+        zipCode: data.contactInfo.zipCode || '',
+      },
+      emergencyContact: data.emergencyContact || { name: '', relationship: '', phone: '' },
+      insuranceInfo: data.insuranceInfo
+        ? {
+            provider: data.insuranceInfo.provider,
+            policyNumber: data.insuranceInfo.policyNumber,
+            groupNumber: data.insuranceInfo.groupNumber || '',
+            expirationDate: data.insuranceInfo.expirationDate || '',
+          }
+        : { provider: '', policyNumber: '', groupNumber: '', expirationDate: '' },
+      allergies: data.allergies || [],
+      active: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
   return apiFetch<PatientResponse>(BASE, '/api/patients', {
     method: 'POST', body: JSON.stringify(data),
   });

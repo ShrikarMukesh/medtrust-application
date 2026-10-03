@@ -8,7 +8,6 @@ import com.medtrust.clinical.domain.model.ClinicalNote;
 import com.medtrust.clinical.domain.model.Encounter;
 import com.medtrust.clinical.domain.model.NoteType;
 import com.medtrust.clinical.domain.repository.EncounterRepository;
-import com.medtrust.clinical.domain.repository.PatientRepository;
 import com.medtrust.clinical.infrastructure.kafka.ClinicalKafkaProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,22 +24,15 @@ public class EncounterService {
         private static final String CLINICAL_EVENTS_TOPIC = "clinical-events";
 
         private final EncounterRepository encounterRepository;
-        private final PatientRepository patientRepository;
         private final ClinicalKafkaProducer kafkaProducer;
 
         public EncounterService(EncounterRepository encounterRepository,
-                        PatientRepository patientRepository,
                         ClinicalKafkaProducer kafkaProducer) {
                 this.encounterRepository = encounterRepository;
-                this.patientRepository = patientRepository;
                 this.kafkaProducer = kafkaProducer;
         }
 
         public EncounterResponse create(CreateEncounterRequest request) {
-                patientRepository.findById(request.patientId())
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Patient with ID " + request.patientId() + " not found"));
-
                 Encounter encounter = Encounter.create(request.patientId());
                 Encounter saved = encounterRepository.save(encounter);
 

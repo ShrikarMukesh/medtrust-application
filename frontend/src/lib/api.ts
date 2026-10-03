@@ -24,6 +24,20 @@ export class ApiError extends Error {
   }
 }
 
+export function formatApiError(err: unknown): string {
+  if (err instanceof ApiError) {
+    try {
+      const parsed = JSON.parse(err.message) as { message?: string };
+      if (parsed.message) return parsed.message;
+    } catch {
+      /* body is not JSON */
+    }
+    return err.message || `HTTP ${err.status}`;
+  }
+  if (err instanceof Error) return err.message;
+  return 'Request failed';
+}
+
 interface ApiResponse<T> {
   success: boolean;
   data: T;

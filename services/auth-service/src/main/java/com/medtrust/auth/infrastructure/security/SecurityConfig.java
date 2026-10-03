@@ -40,6 +40,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                         // Actuator
                         .requestMatchers("/actuator/**").permitAll()
+                        // Staff directory is needed by the UI to join provider names
+                        .requestMatchers(HttpMethod.GET, "/api/users/directory").authenticated()
                         // Admin-only endpoints
                         .requestMatchers(HttpMethod.POST, "/api/auth/register/admin").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
