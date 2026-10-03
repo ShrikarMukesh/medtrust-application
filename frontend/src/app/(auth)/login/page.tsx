@@ -81,6 +81,46 @@ export default function LoginPage() {
           <Button type="submit" variant="primary" size="lg" loading={loading}>
             Sign In
           </Button>
+
+          {/* Quick Demo Role Logins */}
+          <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border)' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Quick Demo Logins (Click to Fill)
+            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.4rem', marginTop: '0.5rem' }}>
+              {[
+                { role: 'ADMIN', email: 'admin@medtrust.com' },
+                { role: 'DOCTOR', email: 'dr.smith@medtrust.com' },
+                { role: 'NURSE', email: 'nurse.clara@medtrust.com' },
+                { role: 'RECEPTIONIST', email: 'recep.sarah@medtrust.com' },
+                { role: 'PATIENT', email: 'patient.james@medtrust.com' },
+              ].map((d) => (
+                <button
+                  key={d.role}
+                  type="button"
+                  onClick={() => {
+                    setEmail(d.email);
+                    setPassword('Password123!');
+                  }}
+                  style={{
+                    padding: '0.35rem 0.5rem',
+                    fontSize: '0.75rem',
+                    borderRadius: 'var(--radius-sm, 4px)',
+                    background: 'var(--bg-elevated, rgba(255,255,255,0.05))',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
+                >
+                  <strong>{d.role}</strong>
+                </button>
+              ))}
+            </div>
+          </div>
         </form>
 
         {/* Footer */}

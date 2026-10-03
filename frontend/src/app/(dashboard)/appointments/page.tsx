@@ -13,6 +13,7 @@ import {
   createAppointment,
   cancelAppointment,
   confirmAppointment,
+  checkInAppointment,
   completeAppointment,
   markNoShow,
   rescheduleAppointment,
@@ -20,16 +21,16 @@ import {
   APPOINTMENT_TYPES,
 } from '@/lib/api/appointments';
 import { mockPatients, mockUsers, getPatientName, getProviderName } from '@/lib/mock-data';
-import { hasRole } from '@/lib/api/auth';
+import { hasRole, getCurrentUserRole } from '@/lib/api/auth';
 import { format } from 'date-fns';
 import {
   Plus, Check, X, CheckCircle, Calendar, AlertCircle,
-  RefreshCw, Clock, User, Stethoscope,
+  RefreshCw, Clock, User, Stethoscope, UserCheck,
 } from 'lucide-react';
 
 /* ─── Types ─────────────────────────────────────────────── */
 
-type ActionKey = 'confirm' | 'cancel' | 'complete' | 'no-show' | 'reschedule';
+type ActionKey = 'confirm' | 'check-in' | 'cancel' | 'complete' | 'no-show' | 'reschedule';
 
 interface Toast {
   id: string;
@@ -56,7 +57,7 @@ export default function AppointmentsPage() {
 
   // Create form state
   const [createForm, setCreateForm] = useState({
-    patientId: '', providerId: '', type: 'CHECKUP', startTime: '', endTime: '', reason: '',
+    patientId: 'pat-001', providerId: '', type: 'CHECKUP', startTime: '', endTime: '', reason: '',
   });
 
   const isStaff = hasRole('ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST');
@@ -66,7 +67,12 @@ export default function AppointmentsPage() {
     setLoading(true);
     try {
       const data = await getAppointments();
-      setAppointments(data);
+      const role = getCurrentUserRole();
+      if (role === 'PATIENT') {
+        setAppointments(data.filter(a => a.patientId === 'pat-001'));
+      } else {
+        setAppointments(data);
+      }
     } catch (err) {
       showToast('error', 'Failed to load appointments');
       console.error(err);
@@ -91,6 +97,10 @@ export default function AppointmentsPage() {
       if (action === 'confirm') {
         await confirmAppointment(id);
         showToast('success', 'Appointment confirmed');
+      }
+      if (action === 'check-in') {
+        await checkInAppointment(id);
+        showToast('success', 'Patient checked in (arrival recorded)');
       }
       if (action === 'complete') {
         await completeAppointment(id);
@@ -252,13 +262,21 @@ export default function AppointmentsPage() {
                 className={`${styles.actionBtn} ${styles.confirm}`}
                 onClick={(e) => { e.stopPropagation(); handleAction(a.id, 'confirm'); }}
                 disabled={!!actionLoading}
-                title="Confirm"
+                title="Confirm Appointment"
               >
                 {busy('confirm') ? <RefreshCw size={13} className={styles.spin} /> : <Check size={13} />}
               </button>
             )}
             {(a.status === 'SCHEDULED' || a.status === 'CONFIRMED') && (
               <>
+                <button
+                  className={`${styles.actionBtn} ${styles.confirm}`}
+                  onClick={(e) => { e.stopPropagation(); handleAction(a.id, 'check-in'); }}
+                  disabled={!!actionLoading}
+                  title="Check In Patient (Arrival)"
+                >
+                  {busy('check-in') ? <RefreshCw size={13} className={styles.spin} /> : <UserCheck size={13} />}
+                </button>
                 <button
                   className={`${styles.actionBtn} ${styles.reschedule}`}
                   onClick={(e) => { e.stopPropagation(); openRescheduleModal(a); }}
@@ -285,12 +303,12 @@ export default function AppointmentsPage() {
                 </button>
               </>
             )}
-            {a.status === 'CONFIRMED' && (
+            {(a.status === 'CONFIRMED' || a.status === 'CHECKED_IN') && (
               <button
                 className={`${styles.actionBtn} ${styles.complete}`}
                 onClick={(e) => { e.stopPropagation(); handleAction(a.id, 'complete'); }}
                 disabled={!!actionLoading}
-                title="Complete"
+                title="Complete Visit"
               >
                 {busy('complete') ? <RefreshCw size={13} className={styles.spin} /> : <CheckCircle size={13} />}
               </button>
@@ -298,7 +316,23 @@ export default function AppointmentsPage() {
           </div>
         );
       },
-    }] : []),
+    }] : [{
+      key: 'actions',
+      header: 'Actions',
+      width: '120px',
+      render: (a: AppointmentResponse) => (
+        (a.status === 'SCHEDULED' || a.status === 'CONFIRMED') ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); openCancelModal(a.id); }}
+            icon={<X size={14} />}
+          >
+            Cancel
+          </Button>
+        ) : null
+      ),
+    }]),
   ];
 
   return (
@@ -355,7 +389,7 @@ export default function AppointmentsPage() {
 
       {/* ── Create Appointment Modal ── */}
       <Modal
-        isOpen={showCreateModal}
+        open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         title="Schedule New Appointment"
       >
@@ -444,7 +478,7 @@ export default function AppointmentsPage() {
 
       {/* ── Cancel Modal ── */}
       <Modal
-        isOpen={showCancelModal}
+        open={showCancelModal}
         onClose={() => setShowCancelModal(false)}
         title="Cancel Appointment"
       >
@@ -473,7 +507,7 @@ export default function AppointmentsPage() {
 
       {/* ── Reschedule Modal ── */}
       <Modal
-        isOpen={showRescheduleModal}
+        open={showRescheduleModal}
         onClose={() => setShowRescheduleModal(false)}
         title="Reschedule Appointment"
       >

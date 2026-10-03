@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Activity,
+  UserCog,
 } from 'lucide-react';
 import { getCurrentUserRole } from '@/lib/api/auth';
 
@@ -43,7 +44,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
     href: '/appointments',
     icon: CalendarDays,
     label: 'Appointments',
-    roles: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST'],
+    roles: ['ADMIN', 'DOCTOR', 'NURSE', 'RECEPTIONIST', 'PATIENT'],
   },
   {
     href: '/clinical',
@@ -56,6 +57,12 @@ const ALL_NAV_ITEMS: NavItem[] = [
     icon: ShieldCheck,
     label: 'Consents',
     roles: ['ADMIN', 'DOCTOR', 'PATIENT'],
+  },
+  {
+    href: '/users',
+    icon: UserCog,
+    label: 'User Management',
+    roles: ['ADMIN'],
   },
   {
     href: '/audit',

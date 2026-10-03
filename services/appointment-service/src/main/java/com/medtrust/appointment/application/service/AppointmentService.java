@@ -69,6 +69,14 @@ public class AppointmentService {
         return toResponse(saved);
     }
 
+    public AppointmentResponse checkIn(String id) {
+        Appointment appointment = findByIdOrThrow(id);
+        appointment.checkIn();
+        Appointment saved = appointmentRepository.save(appointment);
+        publishDomainEvents(saved);
+        return toResponse(saved);
+    }
+
     public AppointmentResponse complete(String id) {
         Appointment appointment = findByIdOrThrow(id);
         appointment.complete();

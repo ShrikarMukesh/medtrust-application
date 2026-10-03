@@ -16,7 +16,7 @@ export interface RescheduleData {
 }
 
 export const APPOINTMENT_TYPES = ['CHECKUP', 'FOLLOW_UP', 'EMERGENCY', 'LAB_WORK', 'SURGERY', 'CONSULTATION'] as const;
-export const APPOINTMENT_STATUSES = ['SCHEDULED', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW'] as const;
+export const APPOINTMENT_STATUSES = ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'CANCELLED', 'COMPLETED', 'NO_SHOW'] as const;
 export type AppointmentType = typeof APPOINTMENT_TYPES[number];
 export type AppointmentStatus = typeof APPOINTMENT_STATUSES[number];
 
@@ -75,6 +75,15 @@ export async function confirmAppointment(id: string): Promise<AppointmentRespons
     return { ...a, status: 'CONFIRMED' };
   }
   return apiFetch<AppointmentResponse>(BASE, `/api/appointments/${id}/confirm`, { method: 'PUT' });
+}
+
+export async function checkInAppointment(id: string): Promise<AppointmentResponse> {
+  if (isMockMode()) {
+    const a = mockAppointments.find(a => a.id === id);
+    if (!a) throw new Error('Not found');
+    return { ...a, status: 'CHECKED_IN' };
+  }
+  return apiFetch<AppointmentResponse>(BASE, `/api/appointments/${id}/check-in`, { method: 'PUT' });
 }
 
 export async function completeAppointment(id: string): Promise<AppointmentResponse> {

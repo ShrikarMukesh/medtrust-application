@@ -103,16 +103,22 @@ public class Appointment {
         }
         this.status = AppointmentStatus.CONFIRMED;
         this.updatedAt = Instant.now();
-        // Event could be added here if needed
+    }
+
+    public void checkIn() {
+        if (this.status != AppointmentStatus.SCHEDULED && this.status != AppointmentStatus.CONFIRMED) {
+            throw new IllegalStateException("Only scheduled or confirmed appointments can be checked in");
+        }
+        this.status = AppointmentStatus.CHECKED_IN;
+        this.updatedAt = Instant.now();
     }
 
     public void complete() {
-        if (this.status != AppointmentStatus.CONFIRMED && this.status != AppointmentStatus.SCHEDULED) {
-            throw new IllegalStateException("Only confirmed or scheduled appointments can be completed");
+        if (this.status != AppointmentStatus.CONFIRMED && this.status != AppointmentStatus.SCHEDULED && this.status != AppointmentStatus.CHECKED_IN) {
+            throw new IllegalStateException("Only confirmed, scheduled, or checked-in appointments can be completed");
         }
         this.status = AppointmentStatus.COMPLETED;
         this.updatedAt = Instant.now();
-        // Event could be added here if needed
     }
 
     public void markNoShow() {

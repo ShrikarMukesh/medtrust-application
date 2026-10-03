@@ -129,6 +129,9 @@ export const mockUsers = [
   { id: 'dr-001', email: 'dr.smith@medtrust.com', firstName: 'John', lastName: 'Smith', role: 'DOCTOR', active: true, lastLoginAt: '2026-09-16T08:00:00Z', createdAt: '2024-01-01T00:00:00Z' },
   { id: 'dr-002', email: 'dr.patel@medtrust.com', firstName: 'Priya', lastName: 'Patel', role: 'DOCTOR', active: true, lastLoginAt: '2026-09-16T07:30:00Z', createdAt: '2024-01-15T00:00:00Z' },
   { id: 'dr-003', email: 'dr.wilson@medtrust.com', firstName: 'Mark', lastName: 'Wilson', role: 'DOCTOR', active: true, lastLoginAt: '2026-09-15T18:00:00Z', createdAt: '2024-03-01T00:00:00Z' },
+  { id: 'nurse-001', email: 'nurse.clara@medtrust.com', firstName: 'Clara', lastName: 'Barton', role: 'NURSE', active: true, lastLoginAt: '2026-09-16T08:15:00Z', createdAt: '2024-02-01T00:00:00Z' },
+  { id: 'recep-001', email: 'recep.sarah@medtrust.com', firstName: 'Sarah', lastName: 'Jenkins', role: 'RECEPTIONIST', active: true, lastLoginAt: '2026-09-16T07:45:00Z', createdAt: '2024-02-15T00:00:00Z' },
+  { id: 'pat-001', email: 'patient.james@medtrust.com', firstName: 'James', lastName: 'Rodriguez', role: 'PATIENT', active: true, lastLoginAt: '2026-09-15T14:20:00Z', createdAt: '2024-04-10T00:00:00Z' },
   { id: 'admin-001', email: 'admin@medtrust.com', firstName: 'System', lastName: 'Admin', role: 'ADMIN', active: true, lastLoginAt: '2026-09-16T09:00:00Z', createdAt: '2024-01-01T00:00:00Z' },
 ];
 

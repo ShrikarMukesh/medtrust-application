@@ -87,6 +87,13 @@ public class AppointmentController {
         return ResponseEntity.ok(Map.of("success", true, "data", response));
     }
 
+    /** Receptionist front-desk check-in when patient arrives at clinic */
+    @PutMapping("/{id}/check-in")
+    public ResponseEntity<Map<String, Object>> checkIn(@PathVariable String id) {
+        AppointmentResponse response = appointmentService.checkIn(id);
+        return ResponseEntity.ok(Map.of("success", true, "data", response));
+    }
+
     @PutMapping("/{id}/complete")
     public ResponseEntity<Map<String, Object>> complete(@PathVariable String id) {
         AppointmentResponse response = appointmentService.complete(id);

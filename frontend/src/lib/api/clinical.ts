@@ -16,6 +16,11 @@ export async function getEncounters(): Promise<EncounterResponse[]> {
   return apiFetch<EncounterResponse[]>(BASE, '/api/encounters');
 }
 
+export async function getEncountersByPatient(patientId: string): Promise<EncounterResponse[]> {
+  if (isMockMode()) return mockEncounters.filter(e => e.patientId === patientId);
+  return apiFetch<EncounterResponse[]>(BASE, `/api/encounters/patient/${patientId}`);
+}
+
 export async function getEncounter(id: string): Promise<EncounterResponse> {
   if (isMockMode()) {
     const e = mockEncounters.find(e => e.id === id);

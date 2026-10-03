@@ -42,6 +42,13 @@ public class EncounterController {
         return ResponseEntity.ok(Map.of("success", true, "data", response));
     }
 
+    /** Patient portal and clinician view: get encounters for a specific patient */
+    @GetMapping("/patient/{patientId}")
+    public ResponseEntity<Map<String, Object>> getByPatientId(@PathVariable String patientId) {
+        List<EncounterResponse> response = encounterService.getByPatientId(patientId);
+        return ResponseEntity.ok(Map.of("success", true, "data", response));
+    }
+
     @PutMapping("/{id}/admit")
     public ResponseEntity<Map<String, Object>> admit(@PathVariable String id) {
         EncounterResponse response = encounterService.admit(id);

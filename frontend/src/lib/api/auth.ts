@@ -16,11 +16,22 @@ const BASE = SERVICE_URLS.auth;
 
 export async function login(data: LoginData): Promise<AuthResponse> {
   if (isMockMode()) {
-    localStorage.setItem('medtrust_access_token', mockAuthResponse.accessToken);
-    localStorage.setItem('medtrust_refresh_token', mockAuthResponse.refreshToken);
-    localStorage.setItem('medtrust_user_role', mockAuthResponse.user.role);
-    localStorage.setItem('medtrust_user', JSON.stringify(mockAuthResponse.user));
-    return mockAuthResponse;
+    const user = mockUsers.find(u => u.email.toLowerCase() === data.email.toLowerCase()) || mockUsers[6]; // fallback admin
+    const authRes: AuthResponse = {
+      ...mockAuthResponse,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
+    };
+    localStorage.setItem('medtrust_access_token', authRes.accessToken);
+    localStorage.setItem('medtrust_refresh_token', authRes.refreshToken);
+    localStorage.setItem('medtrust_user_role', authRes.user.role);
+    localStorage.setItem('medtrust_user', JSON.stringify(authRes.user));
+    return authRes;
   }
   const res = await apiFetch<AuthResponse>(BASE, '/api/auth/login', {
     method: 'POST', body: JSON.stringify(data),
@@ -44,6 +55,55 @@ export async function register(data: RegisterData): Promise<AuthResponse> {
   return res;
 }
 
+export async function adminCreateUser(data: RegisterData): Promise<AuthResponse> {
+  if (isMockMode()) {
+    const newUser: UserResponse = {
+      id: `usr-${Date.now()}`,
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      role: data.role,
+      active: true,
+      lastLoginAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    mockUsers.push(newUser);
+    return {
+      accessToken: 'mock-jwt-token',
+      refreshToken: 'mock-refresh-token',
+      tokenType: 'Bearer',
+      expiresIn: 3600,
+      user: newUser,
+    };
+  }
+  return apiFetch<AuthResponse>(BASE, '/api/auth/register/admin', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deactivateUser(id: string): Promise<UserResponse> {
+  if (isMockMode()) {
+    const user = mockUsers.find(u => u.id === id);
+    if (user) user.active = false;
+    return user || mockUsers[0];
+  }
+  return apiFetch<UserResponse>(BASE, `/api/users/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function reactivateUser(id: string): Promise<UserResponse> {
+  if (isMockMode()) {
+    const user = mockUsers.find(u => u.id === id);
+    if (user) user.active = true;
+    return user || mockUsers[0];
+  }
+  return apiFetch<UserResponse>(BASE, `/api/users/${id}/reactivate`, {
+    method: 'PUT',
+  });
+}
+
 export async function refreshAccessToken(): Promise<AuthResponse> {
   const refreshToken = localStorage.getItem('medtrust_refresh_token');
   if (!refreshToken) {
@@ -60,13 +120,13 @@ export async function refreshAccessToken(): Promise<AuthResponse> {
 }
 
 export async function getUsers(): Promise<UserResponse[]> {
-  if (isMockMode()) return mockUsers;
+  if (isMockMode()) return [...mockUsers];
   return apiFetch<UserResponse[]>(BASE, '/api/users');
 }
 
 /** Staff picker for appointments/consents — available to any authenticated user. */
 export async function getStaffDirectory(): Promise<UserResponse[]> {
-  if (isMockMode()) return mockUsers;
+  if (isMockMode()) return [...mockUsers];
   try {
     return await apiFetch<UserResponse[]>(BASE, '/api/users/directory');
   } catch {
@@ -75,7 +135,14 @@ export async function getStaffDirectory(): Promise<UserResponse[]> {
 }
 
 export async function getCurrentUser(): Promise<UserResponse> {
-  if (isMockMode()) return mockUsers[3]; // admin
+  const local = getCurrentUserFromStorage();
+  if (isMockMode()) {
+    if (local) {
+      const match = mockUsers.find(u => u.id === local.id);
+      if (match) return match;
+    }
+    return mockUsers[6]; // admin
+  }
   return apiFetch<UserResponse>(BASE, '/api/users/me');
 }
 

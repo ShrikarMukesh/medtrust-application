@@ -85,6 +85,13 @@ public class EncounterService {
                 return toResponse(encounter);
         }
 
+        @Transactional(readOnly = true)
+        public List<EncounterResponse> getByPatientId(String patientId) {
+                return encounterRepository.findByPatientId(patientId).stream()
+                                .map(this::toResponse)
+                                .toList();
+        }
+
         public ClinicalNoteResponseDTO addNote(String encounterId, AddClinicalNoteRequest request) {
                 Encounter encounter = encounterRepository.findById(encounterId)
                                 .orElseThrow(() -> new IllegalArgumentException(

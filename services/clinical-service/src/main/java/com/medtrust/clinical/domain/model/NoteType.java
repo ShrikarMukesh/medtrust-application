@@ -5,5 +5,8 @@ public enum NoteType {
     ADMISSION,
     DISCHARGE,
     CONSULTATION,
-    PROCEDURE
+    PROCEDURE,
+    NURSING,
+    TRIAGE
 }
+
