@@ -104,6 +104,21 @@ export async function reactivateUser(id: string): Promise<UserResponse> {
   });
 }
 
+export interface ChangePasswordData {
+  oldPassword: string;
+  newPassword: string;
+}
+
+export async function changePassword(data: ChangePasswordData): Promise<UserResponse> {
+  if (isMockMode()) {
+    return mockUsers[0];
+  }
+  return apiFetch<UserResponse>(BASE, '/api/users/me/password', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function refreshAccessToken(): Promise<AuthResponse> {
   const refreshToken = localStorage.getItem('medtrust_refresh_token');
   if (!refreshToken) {

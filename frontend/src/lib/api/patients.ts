@@ -88,11 +88,59 @@ export async function registerPatient(data: RegisterPatientData): Promise<Patien
   });
 }
 
+export async function updatePatientContact(
+  id: string,
+  data: { phone: string; email: string; address: string; city?: string; state?: string; zipCode?: string }
+): Promise<PatientResponse> {
+  if (isMockMode()) {
+    const p = mockPatients.find((p) => p.id === id);
+    if (!p) throw new Error('Patient not found');
+    p.contactInfo = {
+      phone: data.phone,
+      email: data.email,
+      address: data.address,
+      city: data.city || p.contactInfo.city,
+      state: data.state || p.contactInfo.state,
+      zipCode: data.zipCode || p.contactInfo.zipCode,
+    };
+    p.updatedAt = new Date().toISOString();
+    return { ...p };
+  }
+  return apiFetch<PatientResponse>(BASE, `/api/patients/${id}/contact`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updatePatientInsurance(
+  id: string,
+  data: { provider: string; policyNumber: string; groupNumber?: string; expirationDate?: string }
+): Promise<PatientResponse> {
+  if (isMockMode()) {
+    const p = mockPatients.find((p) => p.id === id);
+    if (!p) throw new Error('Patient not found');
+    p.insuranceInfo = {
+      provider: data.provider,
+      policyNumber: data.policyNumber,
+      groupNumber: data.groupNumber || p.insuranceInfo.groupNumber,
+      expirationDate: data.expirationDate || p.insuranceInfo.expirationDate,
+    };
+    p.updatedAt = new Date().toISOString();
+    return { ...p };
+  }
+  return apiFetch<PatientResponse>(BASE, `/api/patients/${id}/insurance`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function deactivatePatient(id: string): Promise<PatientResponse> {
   if (isMockMode()) {
-    const p = mockPatients.find(p => p.id === id);
+    const p = mockPatients.find((p) => p.id === id);
     if (!p) throw new Error('Patient not found');
-    return { ...p, active: false };
+    p.active = false;
+    p.updatedAt = new Date().toISOString();
+    return { ...p };
   }
   return apiFetch<PatientResponse>(BASE, `/api/patients/${id}`, { method: 'DELETE' });
 }
