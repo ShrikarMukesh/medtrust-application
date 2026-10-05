@@ -16,17 +16,30 @@ import {
   addNote,
   EncounterResponse,
 } from '@/lib/api/clinical';
+import { getPatients, PatientResponse } from '@/lib/api/patients';
 import { mockPatients, getPatientName } from '@/lib/mock-data';
 import { getCurrentUserRole, getCurrentUserFromStorage } from '@/lib/api/auth';
 import { format } from 'date-fns';
 import { Plus, FileText, CheckCircle2, UserCheck, ShieldAlert, Send } from 'lucide-react';
 
+function formatDateSafe(dateStr: string | null | undefined, pattern = 'MMM d, yyyy h:mm a'): string {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '—';
+    return format(d, pattern);
+  } catch {
+    return '—';
+  }
+}
+
 export default function ClinicalPage() {
   const [encounters, setEncounters] = useState<EncounterResponse[]>([]);
+  const [patients, setPatients] = useState<PatientResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEncounter, setSelectedEncounter] = useState<EncounterResponse | null>(null);
   const [showNewEncounterModal, setShowNewEncounterModal] = useState(false);
-  const [selectedPatientId, setSelectedPatientId] = useState(mockPatients[0]?.id || '');
+  const [selectedPatientId, setSelectedPatientId] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Note form state
@@ -48,15 +61,32 @@ export default function ClinicalPage() {
         if (refreshed) setSelectedEncounter(refreshed);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to load encounters:', err);
     } finally {
       setLoading(false);
     }
   }, [selectedEncounter]);
 
+  const loadPatients = useCallback(async () => {
+    try {
+      const data = await getPatients();
+      setPatients(data);
+      if (data.length > 0 && !selectedPatientId) {
+        setSelectedPatientId(data[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load patients, using mock data:', err);
+      setPatients(mockPatients);
+      if (mockPatients.length > 0 && !selectedPatientId) {
+        setSelectedPatientId(mockPatients[0].id);
+      }
+    }
+  }, [selectedPatientId]);
+
   useEffect(() => {
     loadEncounters();
-  }, [loadEncounters]);
+    loadPatients();
+  }, []);
 
   useEffect(() => {
     if (role === 'NURSE') {
@@ -66,16 +96,41 @@ export default function ClinicalPage() {
     }
   }, [role]);
 
+  const resolvePatient = (patientId: string): PatientResponse | undefined => {
+    return patients.find((p) => p.id === patientId) || mockPatients.find((p) => p.id === patientId);
+  };
+
+  const resolvePatientName = (patientId: string): string => {
+    const p = resolvePatient(patientId);
+    if (p && p.fullName) return p.fullName;
+    const fallback = getPatientName(patientId);
+    if (fallback && fallback !== patientId) return fallback;
+    return `Patient (${patientId})`;
+  };
+
+  const handleOpenNewModal = () => {
+    if (!selectedPatientId) {
+      const firstId = patients[0]?.id || mockPatients[0]?.id || '';
+      setSelectedPatientId(firstId);
+    }
+    setShowNewEncounterModal(true);
+  };
+
   const handleCreateEncounter = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPatientId) return;
+    const targetPatientId = selectedPatientId || patients[0]?.id || mockPatients[0]?.id;
+    if (!targetPatientId) return;
+
     setSubmitting(true);
     try {
-      await createEncounter(selectedPatientId);
+      const created = await createEncounter(targetPatientId);
       setShowNewEncounterModal(false);
       await loadEncounters();
+      if (created) {
+        setSelectedEncounter(created);
+      }
     } catch (err) {
-      console.error('Failed to create encounter', err);
+      console.error('Failed to create encounter:', err);
     } finally {
       setSubmitting(false);
     }
@@ -88,7 +143,7 @@ export default function ClinicalPage() {
       setSelectedEncounter(updated);
       await loadEncounters();
     } catch (err) {
-      console.error('Admit failed', err);
+      console.error('Admit failed:', err);
     } finally {
       setSubmitting(false);
     }
@@ -101,7 +156,7 @@ export default function ClinicalPage() {
       setSelectedEncounter(updated);
       await loadEncounters();
     } catch (err) {
-      console.error('Discharge failed', err);
+      console.error('Discharge failed:', err);
     } finally {
       setSubmitting(false);
     }
@@ -115,26 +170,35 @@ export default function ClinicalPage() {
       const author = currentUser
         ? `${currentUser.firstName} ${currentUser.lastName} (${role})`
         : `Staff (${role || 'Clinician'})`;
-      await addNote(selectedEncounter.id, {
+      const createdNote = await addNote(selectedEncounter.id, {
         content: noteContent.trim(),
         authorId: author,
         noteType,
       });
       setNoteContent('');
+      setSelectedEncounter((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          clinicalNotes: [createdNote, ...prev.clinicalNotes],
+        };
+      });
       await loadEncounters();
     } catch (err) {
-      console.error('Failed to add note', err);
+      console.error('Failed to add note:', err);
     } finally {
       setNoteSubmitting(false);
     }
   };
+
+  const patientList = patients.length > 0 ? patients : mockPatients;
 
   const columns = [
     {
       key: 'patient',
       header: 'Patient',
       render: (e: EncounterResponse) => (
-        <span className={styles.nameCell}>{getPatientName(e.patientId)}</span>
+        <span className={styles.nameCell}>{resolvePatientName(e.patientId)}</span>
       ),
     },
     {
@@ -150,13 +214,12 @@ export default function ClinicalPage() {
     {
       key: 'startDate',
       header: 'Start Date',
-      render: (e: EncounterResponse) => format(new Date(e.startDate), 'MMM d, yyyy h:mm a'),
+      render: (e: EncounterResponse) => formatDateSafe(e.startDate),
     },
     {
       key: 'endDate',
       header: 'End Date',
-      render: (e: EncounterResponse) =>
-        e.endDate ? format(new Date(e.endDate), 'MMM d, yyyy h:mm a') : '—',
+      render: (e: EncounterResponse) => formatDateSafe(e.endDate),
     },
     {
       key: 'notes',
@@ -164,7 +227,7 @@ export default function ClinicalPage() {
       width: '90px',
       render: (e: EncounterResponse) => (
         <Badge variant="default" size="sm">
-          {e.clinicalNotes.length}
+          {e.clinicalNotes?.length || 0}
         </Badge>
       ),
     },
@@ -173,7 +236,7 @@ export default function ClinicalPage() {
       header: 'Diagnoses',
       render: (e: EncounterResponse) => (
         <span className={styles.diagnoses}>
-          {e.diagnoses.length > 0 ? e.diagnoses.map((d) => d.code).join(', ') : '—'}
+          {e.diagnoses && e.diagnoses.length > 0 ? e.diagnoses.map((d) => d.code).join(', ') : '—'}
         </span>
       ),
     },
@@ -197,6 +260,9 @@ export default function ClinicalPage() {
     },
   ];
 
+  const currentChartPatient = selectedEncounter ? resolvePatient(selectedEncounter.patientId) : null;
+  const currentChartPatientName = selectedEncounter ? resolvePatientName(selectedEncounter.patientId) : '';
+
   return (
     <>
       <Header
@@ -211,7 +277,7 @@ export default function ClinicalPage() {
           </div>
           <Button
             variant="primary"
-            onClick={() => setShowNewEncounterModal(true)}
+            onClick={handleOpenNewModal}
             icon={<Plus size={16} />}
           >
             New Clinical Encounter
@@ -253,8 +319,9 @@ export default function ClinicalPage() {
                 border: '1px solid var(--border)',
                 color: 'var(--text-primary)',
               }}
+              required
             >
-              {mockPatients.map((p) => (
+              {patientList.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.fullName} ({p.mrn})
                 </option>
@@ -277,19 +344,54 @@ export default function ClinicalPage() {
       <Modal
         open={!!selectedEncounter}
         onClose={() => setSelectedEncounter(null)}
-        title={`Clinical Chart — ${selectedEncounter ? getPatientName(selectedEncounter.patientId) : ''}`}
+        title={selectedEncounter ? `Clinical Chart — ${currentChartPatientName}` : 'Clinical Chart'}
         size="lg"
       >
         {selectedEncounter && (
           <div className={styles.notesModal}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div className={styles.encounterInfo}>
+            {/* Patient Overview Banner */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+                padding: '0.875rem 1rem',
+                background: 'var(--bg-elevated)',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--text-primary)' }}>
+                  {currentChartPatientName}
+                </div>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', display: 'flex', gap: '0.875rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                  <span>MRN: <strong>{currentChartPatient?.mrn || 'N/A'}</strong></span>
+                  {currentChartPatient?.dateOfBirth && <span>DOB: <strong>{currentChartPatient.dateOfBirth}</strong></span>}
+                  {currentChartPatient?.gender && <span>Gender: <strong>{currentChartPatient.gender}</strong></span>}
+                  {currentChartPatient?.bloodType && <span>Blood: <strong>{currentChartPatient.bloodType.replace('_', ' ')}</strong></span>}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Badge variant={statusVariant(selectedEncounter.status)} dot>
                   {selectedEncounter.status}
                 </Badge>
+              </div>
+            </div>
+
+            {/* Encounter Dates & Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div className={styles.encounterInfo}>
                 <span className={styles.encounterDate}>
-                  Started: {format(new Date(selectedEncounter.startDate), 'MMM d, yyyy h:mm a')}
+                  Started: {formatDateSafe(selectedEncounter.startDate)}
                 </span>
+                {selectedEncounter.endDate && (
+                  <span className={styles.encounterDate}>
+                    • Discharged: {formatDateSafe(selectedEncounter.endDate)}
+                  </span>
+                )}
               </div>
 
               {/* Status Action Workflow */}
@@ -328,7 +430,7 @@ export default function ClinicalPage() {
               </div>
             </div>
 
-            {selectedEncounter.diagnoses.length > 0 && (
+            {selectedEncounter.diagnoses && selectedEncounter.diagnoses.length > 0 && (
               <div className={styles.diagnosesSection}>
                 <h4 className={styles.subsectionTitle}>Diagnoses</h4>
                 {selectedEncounter.diagnoses.map((d, i) => (
@@ -409,14 +511,14 @@ export default function ClinicalPage() {
 
             <div className={styles.notesTimeline}>
               <h4 className={styles.subsectionTitle}>Chart Timeline</h4>
-              {selectedEncounter.clinicalNotes.length === 0 ? (
+              {!selectedEncounter.clinicalNotes || selectedEncounter.clinicalNotes.length === 0 ? (
                 <p className={styles.noNotes}>No notes recorded yet</p>
               ) : (
                 selectedEncounter.clinicalNotes.map((note) => (
                   <Card key={note.id} variant="outlined" padding="sm" className={styles.noteCard}>
                     <div className={styles.noteHeader}>
-                      <Badge variant="default" size="sm">{note.noteType.replace('_', ' ')}</Badge>
-                      <span className={styles.noteDate}>{format(new Date(note.createdAt), 'MMM d, h:mm a')}</span>
+                      <Badge variant="default" size="sm">{note.noteType ? note.noteType.replace('_', ' ') : 'NOTE'}</Badge>
+                      <span className={styles.noteDate}>{formatDateSafe(note.createdAt)}</span>
                     </div>
                     <p className={styles.noteContent}>{note.content}</p>
                     <span className={styles.noteAuthor}>Author: {note.authorId}</span>

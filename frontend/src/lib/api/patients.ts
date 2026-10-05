@@ -53,7 +53,7 @@ export interface RegisterPatientData {
 
 export async function registerPatient(data: RegisterPatientData): Promise<PatientResponse> {
   if (isMockMode()) {
-    return {
+    const newPatient: PatientResponse = {
       ...mockPatients[0],
       ...data,
       id: `p-${Date.now()}`,
@@ -82,6 +82,8 @@ export async function registerPatient(data: RegisterPatientData): Promise<Patien
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+    mockPatients.unshift(newPatient);
+    return newPatient;
   }
   return apiFetch<PatientResponse>(BASE, '/api/patients', {
     method: 'POST', body: JSON.stringify(data),
@@ -99,9 +101,9 @@ export async function updatePatientContact(
       phone: data.phone,
       email: data.email,
       address: data.address,
-      city: data.city || p.contactInfo.city,
-      state: data.state || p.contactInfo.state,
-      zipCode: data.zipCode || p.contactInfo.zipCode,
+      city: data.city || p.contactInfo?.city || '',
+      state: data.state || p.contactInfo?.state || '',
+      zipCode: data.zipCode || p.contactInfo?.zipCode || '',
     };
     p.updatedAt = new Date().toISOString();
     return { ...p };
@@ -122,8 +124,8 @@ export async function updatePatientInsurance(
     p.insuranceInfo = {
       provider: data.provider,
       policyNumber: data.policyNumber,
-      groupNumber: data.groupNumber || p.insuranceInfo.groupNumber,
-      expirationDate: data.expirationDate || p.insuranceInfo.expirationDate,
+      groupNumber: data.groupNumber || p.insuranceInfo?.groupNumber || '',
+      expirationDate: data.expirationDate || p.insuranceInfo?.expirationDate || '',
     };
     p.updatedAt = new Date().toISOString();
     return { ...p };
