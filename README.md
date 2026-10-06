@@ -99,13 +99,15 @@ Each service:
 | Next.js | 16.x |
 | React | 19.x |
 
-### Infrastructure
-| Tool | Purpose |
-|---|---|
-| Docker + Docker Compose | Local development |
-| Kubernetes (Kind) | Local K8s cluster |
-| Helm | Service deployments per environment |
-| Resilience4j | Circuit breakers, retries, bulkheads |
+### Observability & Logging (ELK Stack)
+| Component | Technology | Purpose |
+|---|---|---|
+| Log Ingestion & PHI Redaction | Logstash 8.x (Port 5000) | Ingests JSON logs, masks SSNs & credentials |
+| Search & Storage | Elasticsearch 8.x (Port 9200) | Stores partitioned time-series logs |
+| Visualization & Exploration | Kibana 8.x (Port 5601) | Real-time log discovery & operational dashboards |
+| Distributed Tracing | MDC + `X-Trace-Id` Filter | Correlates requests end-to-end across services |
+
+> 📖 **Full Testing & Reference Guide:** [infrastructure/ELK.md](infrastructure/ELK.md)
 
 ---
 

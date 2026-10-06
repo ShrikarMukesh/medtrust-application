@@ -1,23 +1,6 @@
 version: '3.8'
 
 services:
-  medtrust-db:
-    image: postgres:16-alpine
-    container_name: medtrust-db
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: medtrust
-      POSTGRES_PASSWORD: changeme
-      POSTGRES_DB: medtrust
-    volumes:
-      - medtrust_db_data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U medtrust -d postgres" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
@@ -90,5 +73,4 @@ services:
         condition: service_healthy
 
 volumes:
-  medtrust_db_data:
   medtrust_es_data:
