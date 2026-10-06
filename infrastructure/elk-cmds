@@ -1,0 +1,19 @@
+cd infrastructure
+docker-compose up -d elasticsearch logstash kibana
+
+# Endpoints
+Elasticsearch API: http://localhost:9200
+Kibana Web UI: http://localhost:5601
+Logstash TCP Ingestion: localhost:5000
+
+# Health Check
+curl http://localhost:9200/_cluster/health
+
+# View Indices
+curl http://localhost:9200/_cat/indices?v
+
+# Search Logs
+curl "http://localhost:9200/medtrust-logs-*/_search?pretty&size=10"
+
+# Send Test Log
+echo '{"service":"test-srv","level":"INFO","message":"Test message"}' | nc -w 3 localhost 5000

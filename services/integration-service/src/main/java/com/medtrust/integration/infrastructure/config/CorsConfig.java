@@ -18,7 +18,7 @@ public class CorsConfig {
         config.setAllowedOriginPatterns(List.of("http://localhost:3000", "http://127.0.0.1:3000"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("Authorization"));
+        config.setExposedHeaders(List.of("Authorization", "X-Trace-Id"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
         source.registerCorsConfiguration("/**", config);

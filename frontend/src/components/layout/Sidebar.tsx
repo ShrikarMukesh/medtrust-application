@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Activity,
   UserCog,
+  ExternalLink,
 } from 'lucide-react';
 import { getCurrentUserRole } from '@/lib/api/auth';
 
@@ -25,6 +26,7 @@ interface NavItem {
   label: string;
   /** Roles allowed to see this item. Empty = all authenticated users. */
   roles: string[];
+  external?: boolean;
 }
 
 const ALL_NAV_ITEMS: NavItem[] = [
@@ -70,6 +72,13 @@ const ALL_NAV_ITEMS: NavItem[] = [
     label: 'Audit Log',
     roles: ['ADMIN'],
   },
+  {
+    href: 'http://localhost:5601',
+    icon: ExternalLink,
+    label: 'Kibana Logs',
+    roles: ['ADMIN'],
+    external: true,
+  },
 ];
 
 interface SidebarProps {
@@ -102,6 +111,22 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Navigation */}
       <nav className={styles.nav}>
         {visibleNavItems.map((item) => {
+          if (item.external) {
+            return (
+              <a
+                key={item.href}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.navItem}
+                title={collapsed ? item.label : undefined}
+              >
+                <item.icon size={20} />
+                {!collapsed && <span>{item.label}</span>}
+              </a>
+            );
+          }
+
           const isActive = pathname.startsWith(item.href);
           return (
             <Link

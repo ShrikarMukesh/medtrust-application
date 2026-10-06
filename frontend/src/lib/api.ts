@@ -52,8 +52,10 @@ function getAuthToken(): string | null {
 
 function buildHeaders(options: RequestInit): Record<string, string> {
   const token = getAuthToken();
+  const traceId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2);
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'X-Trace-Id': traceId,
     ...((options.headers as Record<string, string>) || {}),
   };
   if (token) {

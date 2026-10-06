@@ -1,0 +1,192 @@
+# ── ELK Stack for MedTrust (Elasticsearch, Logstash, Kibana) ──
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medtrust-elasticsearch
+  namespace: medtrust
+  labels:
+    app: medtrust-elasticsearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: medtrust-elasticsearch
+  template:
+    metadata:
+      labels:
+        app: medtrust-elasticsearch
+    spec:
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+          ports:
+            - containerPort: 9200
+              name: http
+            - containerPort: 9300
+              name: transport
+          env:
+            - name: discovery.type
+              value: "single-node"
+            - name: xpack.security.enabled
+              value: "false"
+            - name: ES_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+            initialDelaySeconds: 20
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: medtrust-elasticsearch
+  namespace: medtrust
+spec:
+  selector:
+    app: medtrust-elasticsearch
+  ports:
+    - port: 9200
+      targetPort: 9200
+      name: http
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-config
+  namespace: medtrust
+data:
+  logstash.conf: |
+    input {
+      tcp {
+        port => 5000
+        codec => json_lines
+      }
+    }
+    filter {
+      mutate {
+        gsub => [
+          "message", "\b\d{3}-\d{2}-\d{4}\b", "XXX-XX-XXXX",
+          "message", "(?i)(password|passwd|secret|token|bearer)=\S+", "\1=***REDACTED***"
+        ]
+      }
+    }
+    output {
+      elasticsearch {
+        hosts => ["http://medtrust-elasticsearch:9200"]
+        index => "medtrust-logs-%{+YYYY.MM.dd}"
+      }
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medtrust-logstash
+  namespace: medtrust
+  labels:
+    app: medtrust-logstash
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: medtrust-logstash
+  template:
+    metadata:
+      labels:
+        app: medtrust-logstash
+    spec:
+      containers:
+        - name: logstash
+          image: docker.elastic.co/logstash/logstash:8.15.0
+          ports:
+            - containerPort: 5000
+              name: tcp-logs
+          volumeMounts:
+            - name: config-volume
+              mountPath: /usr/share/logstash/pipeline/logstash.conf
+              subPath: logstash.conf
+          env:
+            - name: LS_JAVA_OPTS
+              value: "-Xms256m -Xmx256m"
+      volumes:
+        - name: config-volume
+          configMap:
+            name: logstash-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: medtrust-logstash
+  namespace: medtrust
+spec:
+  selector:
+    app: medtrust-logstash
+  ports:
+    - port: 5000
+      targetPort: 5000
+      name: tcp-logs
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medtrust-kibana
+  namespace: medtrust
+  labels:
+    app: medtrust-kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: medtrust-kibana
+  template:
+    metadata:
+      labels:
+        app: medtrust-kibana
+    spec:
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:8.15.0
+          ports:
+            - containerPort: 5601
+              name: http
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: "http://medtrust-elasticsearch:9200"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: medtrust-kibana
+  namespace: medtrust
+spec:
+  selector:
+    app: medtrust-kibana
+  ports:
+    - port: 5601
+      targetPort: 5601
+      name: http
+  type: ClusterIP
