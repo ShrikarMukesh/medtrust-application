@@ -1,6 +1,6 @@
 replicaCount: 2
 image:
-  repository: medtrust/notification-service
+  repository: ctshrikar/notification-service
   tag: latest
   pullPolicy: IfNotPresent
 service:

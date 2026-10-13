@@ -1,6 +1,6 @@
 replicaCount: 2
 image:
-  repository: medtrust/integration-service
+  repository: ctshrikar/integration-service
   tag: latest
   pullPolicy: IfNotPresent
 service:

@@ -3,7 +3,7 @@
 replicaCount: 2
 
 image:
-  repository: medtrust/clinical-service
+  repository: ctshrikar/clinical-service
   tag: latest
   pullPolicy: IfNotPresent
 

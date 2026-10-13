@@ -3,7 +3,7 @@
 replicaCount: 2
 
 image:
-  repository: medtrust/appointment-service
+  repository: ctshrikar/appointment-service
   tag: latest
   pullPolicy: IfNotPresent
 

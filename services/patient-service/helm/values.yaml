@@ -3,7 +3,7 @@
 replicaCount: 2
 
 image:
-  repository: medtrust/patient-service
+  repository: ctshrikar/patient-service
   tag: latest
   pullPolicy: IfNotPresent
 

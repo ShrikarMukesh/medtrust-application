@@ -3,7 +3,7 @@
 replicaCount: 2
 
 image:
-  repository: medtrust/auth-service
+  repository: ctshrikar/auth-service
   tag: latest
   pullPolicy: IfNotPresent
 

@@ -3,7 +3,7 @@
 replicaCount: 2
 
 image:
-  repository: medtrust/consent-service
+  repository: ctshrikar/consent-service
   tag: latest
   pullPolicy: IfNotPresent
 

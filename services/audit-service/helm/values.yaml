@@ -1,6 +1,6 @@
 replicaCount: 2
 image:
-  repository: medtrust/audit-service
+  repository: ctshrikar/audit-service
   tag: latest
   pullPolicy: IfNotPresent
 service:
