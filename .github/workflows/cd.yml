@@ -1,0 +1,143 @@
+name: CD Pipeline - Kubernetes & Helm
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target Environment'
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - production
+        default: 'dev'
+      service:
+        description: 'Service to Deploy (or "all" for all 8 microservices)'
+        required: true
+        type: choice
+        options:
+          - all
+          - appointment-service
+          - clinical-service
+          - patient-service
+          - auth-service
+          - consent-service
+          - audit-service
+          - notification-service
+          - integration-service
+        default: 'all'
+      image_tag:
+        description: 'Docker Image Tag to deploy (e.g. "latest" or commit SHA)'
+        required: true
+        type: string
+        default: 'latest'
+      deploy_infra:
+        description: 'Deploy / update infrastructure (PostgreSQL, Kafka, RabbitMQ)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: cd-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.15.3
+
+      - name: Configure Kubeconfig
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+
+      - name: Verify Cluster Connection
+        run: |
+          echo "Verifying connection to Kubernetes cluster..."
+          kubectl cluster-info
+          kubectl get nodes -o wide
+
+      - name: Deploy Infrastructure
+        if: inputs.deploy_infra == true
+        run: |
+          ENV="${{ inputs.environment }}"
+          NS="medtrust-${ENV}"
+          echo "Ensuring namespace $NS exists..."
+          if [ -f "infrastructure/k8s/environments/namespaces.yaml" ]; then
+            kubectl apply -f infrastructure/k8s/environments/namespaces.yaml
+          else
+            kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
+          fi
+
+          if [ -d "infrastructure/k8s/environments/${ENV}" ]; then
+            echo "Applying infrastructure manifests for $ENV (PostgreSQL, Kafka, RabbitMQ)..."
+            kubectl apply -f "infrastructure/k8s/environments/${ENV}/" -n "$NS"
+          fi
+
+      - name: Deploy Services with Helm
+        run: |
+          ENV="${{ inputs.environment }}"
+          NS="medtrust-${ENV}"
+          TARGET_SERVICE="${{ inputs.service }}"
+          TAG="${{ inputs.image_tag }}"
+
+          SERVICES=(
+            "clinical-service"
+            "appointment-service"
+            "patient-service"
+            "auth-service"
+            "consent-service"
+            "audit-service"
+            "notification-service"
+            "integration-service"
+          )
+
+          if [ "$TARGET_SERVICE" != "all" ]; then
+            SERVICES=("$TARGET_SERVICE")
+          fi
+
+          for svc in "${SERVICES[@]}"; do
+            echo "=========================================="
+            echo "Deploying $svc to $NS (tag: $TAG)..."
+            echo "=========================================="
+
+            HELM_DIR="services/$svc/helm"
+            VALUES_ENV="$HELM_DIR/values-${ENV}.yaml"
+
+            EXTRA_FLAGS=()
+            if [ -f "$VALUES_ENV" ]; then
+              EXTRA_FLAGS+=("-f" "$VALUES_ENV")
+            fi
+
+            helm upgrade --install "$svc" "$HELM_DIR" \
+              -f "$HELM_DIR/values.yaml" \
+              "${EXTRA_FLAGS[@]}" \
+              --set image.repository="ctshrikar/$svc" \
+              --set image.tag="$TAG" \
+              --namespace "$NS" \
+              --create-namespace \
+              --timeout 5m \
+              --wait
+
+            echo "✓ $svc deployed successfully!"
+          done
+
+      - name: Verify Deployment Status
+        run: |
+          ENV="${{ inputs.environment }}"
+          NS="medtrust-${ENV}"
+          echo "=========================================="
+          echo "Deployment Summary for $NS:"
+          echo "=========================================="
+          kubectl get pods -n "$NS" -o wide
+          kubectl get svc -n "$NS"
