@@ -1,0 +1,184 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+    inputs:
+      build_all:
+        description: 'Force build all services regardless of changes'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      appointment-service: ${{ steps.filter.outputs.appointment-service }}
+      audit-service: ${{ steps.filter.outputs.audit-service }}
+      auth-service: ${{ steps.filter.outputs.auth-service }}
+      clinical-service: ${{ steps.filter.outputs.clinical-service }}
+      consent-service: ${{ steps.filter.outputs.consent-service }}
+      integration-service: ${{ steps.filter.outputs.integration-service }}
+      notification-service: ${{ steps.filter.outputs.notification-service }}
+      patient-service: ${{ steps.filter.outputs.patient-service }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      helm: ${{ steps.filter.outputs.helm }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Path Filter
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            appointment-service:
+              - 'services/appointment-service/**'
+            audit-service:
+              - 'services/audit-service/**'
+            auth-service:
+              - 'services/auth-service/**'
+            clinical-service:
+              - 'services/clinical-service/**'
+            consent-service:
+              - 'services/consent-service/**'
+            integration-service:
+              - 'services/integration-service/**'
+            notification-service:
+              - 'services/notification-service/**'
+            patient-service:
+              - 'services/patient-service/**'
+            frontend:
+              - 'frontend/**'
+            helm:
+              - 'services/*/helm/**'
+              - 'infrastructure/k8s/**'
+
+  backend-services:
+    name: Backend - ${{ matrix.service }}
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - appointment-service
+          - audit-service
+          - auth-service
+          - clinical-service
+          - consent-service
+          - integration-service
+          - notification-service
+          - patient-service
+    steps:
+      - name: Check Execution Condition
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.build_all }}" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ needs.detect-changes.outputs[matrix.service] }}" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No changes detected for ${{ matrix.service }}. Skipping build."
+          fi
+
+      - name: Checkout Code
+        if: steps.check.outputs.run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        if: steps.check.outputs.run == 'true'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Ensure Maven Wrapper Executable
+        if: steps.check.outputs.run == 'true'
+        run: chmod +x services/${{ matrix.service }}/mvnw
+
+      - name: Build & Test (${{ matrix.service }})
+        if: steps.check.outputs.run == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: ./mvnw clean package --batch-mode
+
+      - name: Validate Docker Image Build
+        if: steps.check.outputs.run == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: docker build -t medtrust/${{ matrix.service }}:${{ github.sha }} .
+
+  frontend:
+    name: Frontend (Next.js)
+    needs: detect-changes
+    if: |
+      github.event_name == 'push' ||
+      inputs.build_all == true ||
+      needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Build Next.js App
+        run: npm run build
+        env:
+          NEXT_PUBLIC_USE_MOCK: 'true'
+
+  helm-lint:
+    name: Kubernetes & Helm Linting
+    needs: detect-changes
+    if: |
+      github.event_name == 'push' ||
+      inputs.build_all == true ||
+      needs.detect-changes.outputs.helm == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.15.3
+
+      - name: Lint Helm Charts
+        run: |
+          for chart in services/*/helm; do
+            if [ -d "$chart" ]; then
+              echo "==> Linting $chart"
+              helm lint "$chart"
+            fi
+          done

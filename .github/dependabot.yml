@@ -1,0 +1,54 @@
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Frontend (npm)
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+
+  # Microservices (Maven)
+  - package-ecosystem: "maven"
+    directory: "/services/appointment-service"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "maven"
+    directory: "/services/audit-service"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "maven"
+    directory: "/services/auth-service"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "maven"
+    directory: "/services/clinical-service"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "maven"
+    directory: "/services/consent-service"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "maven"
+    directory: "/services/integration-service"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "maven"
+    directory: "/services/notification-service"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "maven"
+    directory: "/services/patient-service"
+    schedule:
+      interval: "weekly"
