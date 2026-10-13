@@ -1,21 +1,13 @@
 name: CI Pipeline
 
 on:
-  push:
-    branches:
-      - master
-      - main
-  pull_request:
-    branches:
-      - master
-      - main
   workflow_dispatch:
     inputs:
       build_all:
         description: 'Force build all services regardless of changes'
         required: false
         type: boolean
-        default: false
+        default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -87,9 +79,7 @@ jobs:
       - name: Check Execution Condition
         id: check
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.build_all }}" = "true" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event_name }}" = "push" ]; then
+          if [ "${{ inputs.build_all }}" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           elif [ "${{ needs.detect-changes.outputs[matrix.service] }}" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
@@ -128,7 +118,7 @@ jobs:
             -t ctshrikar/${{ matrix.service }}:latest .
 
       - name: Log in to Docker Hub
-        if: steps.check.outputs.run == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && env.DOCKERHUB_TOKEN != ''
+        if: steps.check.outputs.run == 'true' && env.DOCKERHUB_TOKEN != ''
         uses: docker/login-action@v3
         env:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -137,7 +127,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Push Docker Image to Docker Hub
-        if: steps.check.outputs.run == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && env.DOCKERHUB_TOKEN != ''
+        if: steps.check.outputs.run == 'true' && env.DOCKERHUB_TOKEN != ''
         env:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         working-directory: services/${{ matrix.service }}
@@ -150,7 +140,6 @@ jobs:
     name: Frontend (Next.js)
     needs: detect-changes
     if: |
-      github.event_name == 'push' ||
       inputs.build_all == true ||
       needs.detect-changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
@@ -183,7 +172,6 @@ jobs:
     name: Kubernetes & Helm Linting
     needs: detect-changes
     if: |
-      github.event_name == 'push' ||
       inputs.build_all == true ||
       needs.detect-changes.outputs.helm == 'true'
     runs-on: ubuntu-latest
